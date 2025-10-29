@@ -21,12 +21,22 @@ interface UserProfile {
   about: string;
 }
 
+interface Comment {
+  id: number;
+  author: string;
+  avatar: string;
+  text: string;
+  date: string;
+}
+
 interface Post {
   id: number;
   text: string;
   likes: number;
   date: string;
   liked: boolean;
+  comments: Comment[];
+  showComments: boolean;
 }
 
 interface Photo {
@@ -49,14 +59,28 @@ const Index = () => {
   });
 
   const [posts, setPosts] = useState<Post[]>([
-    { id: 1, text: 'Отличный день сегодня! ☀️', likes: 15, date: '1 час назад', liked: false },
-    { id: 2, text: 'Запустил новый проект, делюсь впечатлениями 🚀', likes: 23, date: '3 часа назад', liked: true }
+    { id: 1, text: 'Отличный день сегодня! ☀️', likes: 15, date: '1 час назад', liked: false, comments: [], showComments: false },
+    { id: 2, text: 'Запустил новый проект, делюсь впечатлениями 🚀', likes: 23, date: '3 часа назад', liked: true, comments: [
+      { id: 1, author: 'Анна Смирнова', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Anna', text: 'Поздравляю! 🎉', date: '2 часа назад' }
+    ], showComments: false }
   ]);
 
   const [newPost, setNewPost] = useState('');
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editedProfile, setEditedProfile] = useState(profile);
   const [photos, setPhotos] = useState<Photo[]>([]);
+  const [commentDialogOpen, setCommentDialogOpen] = useState(false);
+  const [currentPostId, setCurrentPostId] = useState<number | null>(null);
+  const [commentText, setCommentText] = useState('');
+  const [commentAuthor, setCommentAuthor] = useState('Анна Смирнова');
+  const [commentAvatar, setCommentAvatar] = useState('https://api.dicebear.com/7.x/avataaars/svg?seed=Anna');
+
+  const mockUsers = [
+    { name: 'Анна Смирнова', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Anna' },
+    { name: 'Петр Иванов', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Petr' },
+    { name: 'Мария Петрова', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Maria' },
+    { name: 'Алексей Сидоров', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alexey' }
+  ];
 
   const handleLike = (postId: number) => {
     setPosts(posts.map(post => 
@@ -73,7 +97,9 @@ const Index = () => {
         text: newPost,
         likes: 0,
         date: 'только что',
-        liked: false
+        liked: false,
+        comments: [],
+        showComments: false
       };
       setPosts([post, ...posts]);
       setNewPost('');
@@ -105,6 +131,38 @@ const Index = () => {
 
   const handleDeletePhoto = (photoId: number) => {
     setPhotos(photos.filter(photo => photo.id !== photoId));
+  };
+
+  const handleOpenCommentDialog = (postId: number) => {
+    setCurrentPostId(postId);
+    setCommentDialogOpen(true);
+  };
+
+  const handleAddComment = () => {
+    if (commentText.trim() && currentPostId) {
+      const newComment: Comment = {
+        id: Date.now(),
+        author: commentAuthor,
+        avatar: commentAvatar,
+        text: commentText,
+        date: 'только что'
+      };
+      setPosts(posts.map(post => 
+        post.id === currentPostId
+          ? { ...post, comments: [...post.comments, newComment], showComments: true }
+          : post
+      ));
+      setCommentText('');
+      setCommentDialogOpen(false);
+    }
+  };
+
+  const handleToggleComments = (postId: number) => {
+    setPosts(posts.map(post => 
+      post.id === postId
+        ? { ...post, showComments: !post.showComments }
+        : post
+    ));
   };
 
   return (
@@ -389,21 +447,99 @@ const Index = () => {
                       <Icon name="Heart" size={16} className="mr-2" fill={post.liked ? 'currentColor' : 'none'} />
                       {post.likes}
                     </Button>
-                    <Button variant="ghost" size="sm">
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => post.comments.length > 0 ? handleToggleComments(post.id) : handleOpenCommentDialog(post.id)}
+                    >
                       <Icon name="MessageCircle" size={16} className="mr-2" />
-                      Комментировать
+                      {post.comments.length > 0 ? `Комментарии (${post.comments.length})` : 'Комментировать'}
                     </Button>
                     <Button variant="ghost" size="sm">
                       <Icon name="Share2" size={16} className="mr-2" />
                       Поделиться
                     </Button>
                   </div>
+
+                  {post.comments.length > 0 && post.showComments && (
+                    <div className="mt-4 space-y-3 pt-3 border-t border-border">
+                      {post.comments.map(comment => (
+                        <div key={comment.id} className="flex gap-3">
+                          <Avatar className="w-8 h-8">
+                            <AvatarImage src={comment.avatar} alt={comment.author} />
+                            <AvatarFallback>{comment.author[0]}</AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1">
+                            <div className="bg-muted rounded-lg px-3 py-2">
+                              <p className="text-sm font-semibold text-foreground">{comment.author}</p>
+                              <p className="text-sm text-foreground">{comment.text}</p>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1 ml-3">{comment.date}</p>
+                          </div>
+                        </div>
+                      ))}
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleOpenCommentDialog(post.id)}
+                        className="ml-11"
+                      >
+                        <Icon name="Plus" size={16} className="mr-2" />
+                        Добавить комментарий
+                      </Button>
+                    </div>
+                  )}
                 </Card>
               ))}
             </div>
           </main>
         </div>
       </div>
+
+      <Dialog open={commentDialogOpen} onOpenChange={setCommentDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Добавить комментарий</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>От чьего имени комментировать?</Label>
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                {mockUsers.map((user) => (
+                  <Button
+                    key={user.name}
+                    variant={commentAuthor === user.name ? 'default' : 'outline'}
+                    className="justify-start h-auto py-2"
+                    onClick={() => {
+                      setCommentAuthor(user.name);
+                      setCommentAvatar(user.avatar);
+                    }}
+                  >
+                    <Avatar className="w-8 h-8 mr-2">
+                      <AvatarImage src={user.avatar} alt={user.name} />
+                      <AvatarFallback>{user.name[0]}</AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm">{user.name}</span>
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <Label>Комментарий</Label>
+              <Textarea
+                placeholder="Напишите комментарий..."
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                rows={3}
+              />
+            </div>
+            <Button onClick={handleAddComment} disabled={!commentText.trim()} className="w-full">
+              <Icon name="Send" size={16} className="mr-2" />
+              Отправить комментарий
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

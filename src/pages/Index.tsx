@@ -13,6 +13,7 @@ interface UserProfile {
   name: string;
   status: string;
   avatar: string;
+  coverImage: string;
   birthDate: string;
   city: string;
   education: string;
@@ -86,6 +87,7 @@ const Index = () => {
     name: 'Иван Иванов',
     status: 'Жизнь хороша! 🚀',
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Ivan',
+    coverImage: '',
     birthDate: '15 марта 1995',
     city: 'Москва',
     education: 'МГУ им. М.В. Ломоносова',
@@ -103,12 +105,14 @@ const Index = () => {
 
   const [newPost, setNewPost] = useState('');
   const [newPostImage, setNewPostImage] = useState<string>('');
+  const [newPostDate, setNewPostDate] = useState('');
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editedProfile, setEditedProfile] = useState(profile);
   const [editPostDialogOpen, setEditPostDialogOpen] = useState(false);
   const [editingPost, setEditingPost] = useState<Post | null>(null);
   const [editedPostText, setEditedPostText] = useState('');
   const [editedPostImage, setEditedPostImage] = useState<string>('');
+  const [editedPostDate, setEditedPostDate] = useState('');
   const [photos, setPhotos] = useState<Photo[]>(() => loadFromStorage('photos', []));
   const [music, setMusic] = useState<Music[]>(() => loadFromStorage('music', [
     { id: 1, title: 'Imagine', artist: 'John Lennon' },
@@ -151,9 +155,9 @@ const Index = () => {
 
   const handleAddPost = () => {
     if (newPost.trim()) {
-      const timestamp = Date.now();
+      const timestamp = newPostDate ? new Date(newPostDate).getTime() : Date.now();
       const post: Post = {
-        id: timestamp,
+        id: Date.now(),
         text: newPost,
         likes: 0,
         date: new Date(timestamp).toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }),
@@ -166,6 +170,7 @@ const Index = () => {
       setPosts([post, ...posts]);
       setNewPost('');
       setNewPostImage('');
+      setNewPostDate('');
     }
   };
 
@@ -184,20 +189,29 @@ const Index = () => {
     setEditingPost(post);
     setEditedPostText(post.text);
     setEditedPostImage(post.image || '');
+    setEditedPostDate(new Date(post.timestamp).toISOString().slice(0, 16));
     setEditPostDialogOpen(true);
   };
 
   const handleSaveEditedPost = () => {
     if (editingPost && editedPostText.trim()) {
+      const newTimestamp = editedPostDate ? new Date(editedPostDate).getTime() : editingPost.timestamp;
       setPosts(posts.map(post => 
         post.id === editingPost.id
-          ? { ...post, text: editedPostText, image: editedPostImage }
+          ? { 
+              ...post, 
+              text: editedPostText, 
+              image: editedPostImage,
+              timestamp: newTimestamp,
+              date: new Date(newTimestamp).toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
+            }
           : post
       ));
       setEditPostDialogOpen(false);
       setEditingPost(null);
       setEditedPostText('');
       setEditedPostImage('');
+      setEditedPostDate('');
     }
   };
 
@@ -249,6 +263,17 @@ const Index = () => {
       const reader = new FileReader();
       reader.onloadend = () => {
         setProfile({ ...profile, avatar: reader.result as string });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfile({ ...profile, coverImage: reader.result as string });
       };
       reader.readAsDataURL(file);
     }
@@ -387,7 +412,27 @@ const Index = () => {
 
           <main className="lg:col-span-9">
             <Card className="mb-6 overflow-hidden">
-              <div className="h-48 bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20"></div>
+              <div className="relative h-48 group">
+                {profile.coverImage ? (
+                  <img src={profile.coverImage} alt="Cover" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20"></div>
+                )}
+                <label 
+                  htmlFor="cover-upload"
+                  className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                >
+                  <Icon name="Camera" size={32} className="text-white mr-2" />
+                  <span className="text-white font-medium">Изменить обложку</span>
+                </label>
+                <input
+                  id="cover-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleCoverUpload}
+                  className="hidden"
+                />
+              </div>
               <div className="px-6 pb-6">
                 <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end -mt-16 mb-4">
                   <div className="relative group">
@@ -714,6 +759,15 @@ const Index = () => {
                   </Button>
                 </div>
               )}
+              <div className="mb-3">
+                <Label className="text-sm text-muted-foreground">Дата публикации (оставьте пустым для текущей даты)</Label>
+                <Input
+                  type="datetime-local"
+                  value={newPostDate}
+                  onChange={(e) => setNewPostDate(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
               <div className="flex gap-2">
                 <label htmlFor="post-image-upload">
                   <Button variant="outline" size="sm" type="button" asChild>
@@ -902,6 +956,15 @@ const Index = () => {
                 </Button>
               </div>
             )}
+            <div>
+              <Label>Дата публикации</Label>
+              <Input
+                type="datetime-local"
+                value={editedPostDate}
+                onChange={(e) => setEditedPostDate(e.target.value)}
+                className="mt-2"
+              />
+            </div>
             <div>
               <label htmlFor="edit-post-image-upload">
                 <Button variant="outline" size="sm" type="button" asChild>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -45,8 +45,42 @@ interface Photo {
   name: string;
 }
 
+interface Music {
+  id: number;
+  title: string;
+  artist: string;
+}
+
+interface Video {
+  id: number;
+  title: string;
+  thumbnail: string;
+  duration: string;
+}
+
+interface Message {
+  id: number;
+  from: string;
+  avatar: string;
+  text: string;
+  time: string;
+  unread: boolean;
+}
+
+interface Community {
+  id: number;
+  name: string;
+  members: number;
+  avatar: string;
+}
+
 const Index = () => {
-  const [profile, setProfile] = useState<UserProfile>({
+  const loadFromStorage = <T,>(key: string, defaultValue: T): T => {
+    const stored = localStorage.getItem(key);
+    return stored ? JSON.parse(stored) : defaultValue;
+  };
+
+  const [profile, setProfile] = useState<UserProfile>(() => loadFromStorage('profile', {
     name: 'Иван Иванов',
     status: 'Жизнь хороша! 🚀',
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Ivan',
@@ -56,19 +90,37 @@ const Index = () => {
     work: 'Google',
     phone: '+7 (999) 123-45-67',
     about: 'Люблю программирование и путешествия'
-  });
+  }));
 
-  const [posts, setPosts] = useState<Post[]>([
+  const [posts, setPosts] = useState<Post[]>(() => loadFromStorage('posts', [
     { id: 1, text: 'Отличный день сегодня! ☀️', likes: 15, date: '1 час назад', liked: false, comments: [], showComments: false },
     { id: 2, text: 'Запустил новый проект, делюсь впечатлениями 🚀', likes: 23, date: '3 часа назад', liked: true, comments: [
       { id: 1, author: 'Анна Смирнова', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Anna', text: 'Поздравляю! 🎉', date: '2 часа назад' }
     ], showComments: false }
-  ]);
+  ]));
 
   const [newPost, setNewPost] = useState('');
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editedProfile, setEditedProfile] = useState(profile);
-  const [photos, setPhotos] = useState<Photo[]>([]);
+  const [photos, setPhotos] = useState<Photo[]>(() => loadFromStorage('photos', []));
+  const [music, setMusic] = useState<Music[]>(() => loadFromStorage('music', [
+    { id: 1, title: 'Imagine', artist: 'John Lennon' },
+    { id: 2, title: 'Bohemian Rhapsody', artist: 'Queen' },
+    { id: 3, title: 'Hotel California', artist: 'Eagles' }
+  ]));
+  const [videos, setVideos] = useState<Video[]>(() => loadFromStorage('videos', [
+    { id: 1, title: 'Путешествие в горы', thumbnail: 'https://api.dicebear.com/7.x/shapes/svg?seed=video1', duration: '5:32' },
+    { id: 2, title: 'Мой проект', thumbnail: 'https://api.dicebear.com/7.x/shapes/svg?seed=video2', duration: '3:15' }
+  ]));
+  const [messages, setMessages] = useState<Message[]>(() => loadFromStorage('messages', [
+    { id: 1, from: 'Анна Смирнова', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Anna', text: 'Привет! Как дела?', time: '10:30', unread: true },
+    { id: 2, from: 'Петр Иванов', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Petr', text: 'Увидел твой пост, круто!', time: 'вчера', unread: false }
+  ]));
+  const [communities, setCommunities] = useState<Community[]>(() => loadFromStorage('communities', [
+    { id: 1, name: 'Программисты России', members: 45231, avatar: 'https://api.dicebear.com/7.x/shapes/svg?seed=prog' },
+    { id: 2, name: 'Путешественники', members: 23456, avatar: 'https://api.dicebear.com/7.x/shapes/svg?seed=travel' },
+    { id: 3, name: 'Фотография', members: 12890, avatar: 'https://api.dicebear.com/7.x/shapes/svg?seed=photo' }
+  ]));
   const [commentDialogOpen, setCommentDialogOpen] = useState(false);
   const [currentPostId, setCurrentPostId] = useState<number | null>(null);
   const [commentText, setCommentText] = useState('');
@@ -164,6 +216,34 @@ const Index = () => {
         : post
     ));
   };
+
+  useEffect(() => {
+    localStorage.setItem('profile', JSON.stringify(profile));
+  }, [profile]);
+
+  useEffect(() => {
+    localStorage.setItem('posts', JSON.stringify(posts));
+  }, [posts]);
+
+  useEffect(() => {
+    localStorage.setItem('photos', JSON.stringify(photos));
+  }, [photos]);
+
+  useEffect(() => {
+    localStorage.setItem('music', JSON.stringify(music));
+  }, [music]);
+
+  useEffect(() => {
+    localStorage.setItem('videos', JSON.stringify(videos));
+  }, [videos]);
+
+  useEffect(() => {
+    localStorage.setItem('messages', JSON.stringify(messages));
+  }, [messages]);
+
+  useEffect(() => {
+    localStorage.setItem('communities', JSON.stringify(communities));
+  }, [communities]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -315,11 +395,14 @@ const Index = () => {
                 </div>
 
                 <Tabs defaultValue="info" className="mt-6">
-                  <TabsList className="w-full justify-start">
+                  <TabsList className="w-full justify-start overflow-x-auto">
                     <TabsTrigger value="info">Информация</TabsTrigger>
                     <TabsTrigger value="photos">Фотографии</TabsTrigger>
+                    <TabsTrigger value="music">Музыка</TabsTrigger>
+                    <TabsTrigger value="videos">Видео</TabsTrigger>
                     <TabsTrigger value="friends">Друзья</TabsTrigger>
                     <TabsTrigger value="communities">Сообщества</TabsTrigger>
+                    <TabsTrigger value="messages">Сообщения</TabsTrigger>
                   </TabsList>
                   
                   <TabsContent value="info" className="mt-4">
@@ -370,11 +453,75 @@ const Index = () => {
                   </TabsContent>
 
                   <TabsContent value="photos" className="mt-4">
+                    <div className="mb-4">
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handlePhotoUpload}
+                        className="mb-2"
+                      />
+                    </div>
                     <div className="grid grid-cols-3 gap-2">
-                      {[1, 2, 3, 4, 5, 6].map(i => (
-                        <div key={i} className="aspect-square bg-muted rounded flex items-center justify-center">
-                          <Icon name="Image" size={32} className="text-muted-foreground" />
+                      {photos.map(photo => (
+                        <div key={photo.id} className="relative aspect-square group">
+                          <img src={photo.url} alt={photo.name} className="w-full h-full object-cover rounded" />
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => handleDeletePhoto(photo.id)}
+                          >
+                            <Icon name="Trash2" size={16} />
+                          </Button>
                         </div>
+                      ))}
+                      {photos.length === 0 && (
+                        <div className="col-span-3 text-center py-8 text-muted-foreground">
+                          Загрузите первое фото
+                        </div>
+                      )}
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="music" className="mt-4">
+                    <div className="space-y-2">
+                      {music.map(track => (
+                        <Card key={track.id} className="p-3 flex items-center gap-3">
+                          <div className="w-10 h-10 bg-primary/10 rounded flex items-center justify-center">
+                            <Icon name="Music" size={20} className="text-primary" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-medium text-foreground">{track.title}</p>
+                            <p className="text-sm text-muted-foreground">{track.artist}</p>
+                          </div>
+                          <Button variant="ghost" size="sm">
+                            <Icon name="Play" size={16} />
+                          </Button>
+                        </Card>
+                      ))}
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="videos" className="mt-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      {videos.map(video => (
+                        <Card key={video.id} className="overflow-hidden">
+                          <div className="relative aspect-video bg-muted">
+                            <img src={video.thumbnail} alt={video.title} className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                              <Button variant="secondary" size="lg" className="rounded-full">
+                                <Icon name="Play" size={24} />
+                              </Button>
+                            </div>
+                            <span className="absolute bottom-2 right-2 bg-black/70 text-white px-2 py-1 text-xs rounded">
+                              {video.duration}
+                            </span>
+                          </div>
+                          <div className="p-3">
+                            <p className="font-medium text-sm text-foreground">{video.title}</p>
+                          </div>
+                        </Card>
                       ))}
                     </div>
                   </TabsContent>
@@ -395,15 +542,49 @@ const Index = () => {
 
                   <TabsContent value="communities" className="mt-4">
                     <div className="space-y-3">
-                      {['Программисты России', 'Путешественники', 'Фотография'].map((community, i) => (
-                        <Card key={i} className="p-3 flex items-center gap-3">
-                          <div className="w-12 h-12 bg-primary/10 rounded flex items-center justify-center">
-                            <Icon name="Users" size={24} className="text-primary" />
+                      {communities.map(community => (
+                        <Card key={community.id} className="p-3 flex items-center gap-3">
+                          <Avatar className="w-12 h-12">
+                            <AvatarImage src={community.avatar} alt={community.name} />
+                            <AvatarFallback>
+                              <Icon name="Users" size={24} className="text-primary" />
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1">
+                            <p className="font-medium text-foreground">{community.name}</p>
+                            <p className="text-sm text-muted-foreground">{community.members.toLocaleString()} участников</p>
                           </div>
-                          <div>
-                            <p className="font-medium text-foreground">{community}</p>
-                            <p className="text-sm text-muted-foreground">Участник</p>
+                          <Button variant="outline" size="sm">
+                            <Icon name="Bell" size={16} className="mr-2" />
+                            Подписан
+                          </Button>
+                        </Card>
+                      ))}
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="messages" className="mt-4">
+                    <div className="space-y-2">
+                      {messages.map(message => (
+                        <Card key={message.id} className={`p-3 flex items-center gap-3 cursor-pointer hover:bg-accent transition-colors ${message.unread ? 'bg-accent/50' : ''}`}>
+                          <Avatar>
+                            <AvatarImage src={message.avatar} alt={message.from} />
+                            <AvatarFallback>{message.from[0]}</AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-1">
+                              <p className={`font-medium text-sm ${message.unread ? 'text-foreground' : 'text-muted-foreground'}`}>
+                                {message.from}
+                              </p>
+                              <span className="text-xs text-muted-foreground">{message.time}</span>
+                            </div>
+                            <p className={`text-sm truncate ${message.unread ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+                              {message.text}
+                            </p>
                           </div>
+                          {message.unread && (
+                            <div className="w-2 h-2 bg-primary rounded-full"></div>
+                          )}
                         </Card>
                       ))}
                     </div>

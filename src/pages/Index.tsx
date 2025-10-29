@@ -234,14 +234,17 @@ const Index = () => {
                     <h2 className="text-2xl font-bold text-foreground">{profile.name}</h2>
                     <p className="text-muted-foreground">{profile.status}</p>
                   </div>
-                  <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+                  <Dialog open={editDialogOpen} onOpenChange={(open) => {
+                    setEditDialogOpen(open);
+                    if (open) setEditedProfile(profile);
+                  }}>
                     <DialogTrigger asChild>
-                      <Button variant="outline" onClick={() => setEditedProfile(profile)}>
+                      <Button variant="outline">
                         <Icon name="Edit" size={16} className="mr-2" />
                         Редактировать
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                    <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto" onInteractOutside={(e) => e.preventDefault()}>
                       <DialogHeader>
                         <DialogTitle>Редактировать профиль</DialogTitle>
                       </DialogHeader>

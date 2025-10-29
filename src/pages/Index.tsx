@@ -37,6 +37,8 @@ interface Post {
   liked: boolean;
   comments: Comment[];
   showComments: boolean;
+  image?: string;
+  timestamp: number;
 }
 
 interface Photo {
@@ -93,15 +95,20 @@ const Index = () => {
   }));
 
   const [posts, setPosts] = useState<Post[]>(() => loadFromStorage('posts', [
-    { id: 1, text: 'Отличный день сегодня! ☀️', likes: 15, date: '1 час назад', liked: false, comments: [], showComments: false },
+    { id: 1, text: 'Отличный день сегодня! ☀️', likes: 15, date: '1 час назад', liked: false, comments: [], showComments: false, timestamp: Date.now() - 3600000 },
     { id: 2, text: 'Запустил новый проект, делюсь впечатлениями 🚀', likes: 23, date: '3 часа назад', liked: true, comments: [
       { id: 1, author: 'Анна Смирнова', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Anna', text: 'Поздравляю! 🎉', date: '2 часа назад' }
-    ], showComments: false }
+    ], showComments: false, timestamp: Date.now() - 10800000 }
   ]));
 
   const [newPost, setNewPost] = useState('');
+  const [newPostImage, setNewPostImage] = useState<string>('');
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editedProfile, setEditedProfile] = useState(profile);
+  const [editPostDialogOpen, setEditPostDialogOpen] = useState(false);
+  const [editingPost, setEditingPost] = useState<Post | null>(null);
+  const [editedPostText, setEditedPostText] = useState('');
+  const [editedPostImage, setEditedPostImage] = useState<string>('');
   const [photos, setPhotos] = useState<Photo[]>(() => loadFromStorage('photos', []));
   const [music, setMusic] = useState<Music[]>(() => loadFromStorage('music', [
     { id: 1, title: 'Imagine', artist: 'John Lennon' },
@@ -144,18 +151,69 @@ const Index = () => {
 
   const handleAddPost = () => {
     if (newPost.trim()) {
+      const timestamp = Date.now();
       const post: Post = {
-        id: Date.now(),
+        id: timestamp,
         text: newPost,
         likes: 0,
-        date: 'только что',
+        date: new Date(timestamp).toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }),
         liked: false,
         comments: [],
-        showComments: false
+        showComments: false,
+        image: newPostImage,
+        timestamp
       };
       setPosts([post, ...posts]);
       setNewPost('');
+      setNewPostImage('');
     }
+  };
+
+  const handlePostImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNewPostImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleEditPost = (post: Post) => {
+    setEditingPost(post);
+    setEditedPostText(post.text);
+    setEditedPostImage(post.image || '');
+    setEditPostDialogOpen(true);
+  };
+
+  const handleSaveEditedPost = () => {
+    if (editingPost && editedPostText.trim()) {
+      setPosts(posts.map(post => 
+        post.id === editingPost.id
+          ? { ...post, text: editedPostText, image: editedPostImage }
+          : post
+      ));
+      setEditPostDialogOpen(false);
+      setEditingPost(null);
+      setEditedPostText('');
+      setEditedPostImage('');
+    }
+  };
+
+  const handleEditPostImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setEditedPostImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleDeletePost = (postId: number) => {
+    setPosts(posts.filter(post => post.id !== postId));
   };
 
   const handleSaveProfile = () => {
@@ -255,6 +313,21 @@ const Index = () => {
   useEffect(() => {
     localStorage.setItem('communities', JSON.stringify(communities));
   }, [communities]);
+
+  const formatPostDate = (timestamp: number) => {
+    const now = Date.now();
+    const diff = now - timestamp;
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 1) return 'только что';
+    if (minutes < 60) return `${minutes} мин${minutes === 1 ? 'уту' : 'ут'} назад`;
+    if (hours < 24) return `${hours} час${hours === 1 ? '' : hours < 5 ? 'а' : 'ов'} назад`;
+    if (days < 7) return `${days} д${days === 1 ? 'ень' : days < 5 ? 'ня' : 'ней'} назад`;
+    
+    return new Date(timestamp).toLocaleString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -626,11 +699,42 @@ const Index = () => {
                 value={newPost}
                 onChange={(e) => setNewPost(e.target.value)}
                 className="mb-3"
+                rows={3}
               />
-              <Button onClick={handleAddPost} disabled={!newPost.trim()}>
-                <Icon name="Send" size={16} className="mr-2" />
-                Опубликовать
-              </Button>
+              {newPostImage && (
+                <div className="relative mb-3 w-full max-w-md">
+                  <img src={newPostImage} alt="Preview" className="w-full rounded-lg" />
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="absolute top-2 right-2"
+                    onClick={() => setNewPostImage('')}
+                  >
+                    <Icon name="X" size={16} />
+                  </Button>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <label htmlFor="post-image-upload">
+                  <Button variant="outline" size="sm" type="button" asChild>
+                    <span>
+                      <Icon name="Image" size={16} className="mr-2" />
+                      Фото
+                    </span>
+                  </Button>
+                </label>
+                <input
+                  id="post-image-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePostImageUpload}
+                  className="hidden"
+                />
+                <Button onClick={handleAddPost} disabled={!newPost.trim()}>
+                  <Icon name="Send" size={16} className="mr-2" />
+                  Опубликовать
+                </Button>
+              </div>
             </Card>
 
             <div className="space-y-4">
@@ -641,12 +745,31 @@ const Index = () => {
                       <AvatarImage src={profile.avatar} alt={profile.name} />
                       <AvatarFallback>{profile.name[0]}</AvatarFallback>
                     </Avatar>
-                    <div>
+                    <div className="flex-1">
                       <p className="font-semibold text-foreground">{profile.name}</p>
-                      <p className="text-sm text-muted-foreground">{post.date}</p>
+                      <p className="text-sm text-muted-foreground">{formatPostDate(post.timestamp)}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditPost(post)}
+                      >
+                        <Icon name="Edit" size={16} />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeletePost(post.id)}
+                      >
+                        <Icon name="Trash2" size={16} />
+                      </Button>
                     </div>
                   </div>
-                  <p className="mb-3 text-foreground">{post.text}</p>
+                  <p className="mb-3 text-foreground whitespace-pre-wrap">{post.text}</p>
+                  {post.image && (
+                    <img src={post.image} alt="Post" className="w-full rounded-lg mb-3 max-w-2xl" />
+                  )}
                   <div className="flex gap-4 pt-3 border-t border-border">
                     <Button 
                       variant="ghost" 
@@ -746,6 +869,59 @@ const Index = () => {
             <Button onClick={handleAddComment} disabled={!commentText.trim()} className="w-full">
               <Icon name="Send" size={16} className="mr-2" />
               Отправить комментарий
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editPostDialogOpen} onOpenChange={setEditPostDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Редактировать пост</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Текст поста</Label>
+              <Textarea
+                value={editedPostText}
+                onChange={(e) => setEditedPostText(e.target.value)}
+                rows={4}
+                className="mt-2"
+              />
+            </div>
+            {editedPostImage && (
+              <div className="relative w-full max-w-md">
+                <img src={editedPostImage} alt="Preview" className="w-full rounded-lg" />
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="absolute top-2 right-2"
+                  onClick={() => setEditedPostImage('')}
+                >
+                  <Icon name="X" size={16} />
+                </Button>
+              </div>
+            )}
+            <div>
+              <label htmlFor="edit-post-image-upload">
+                <Button variant="outline" size="sm" type="button" asChild>
+                  <span>
+                    <Icon name="Image" size={16} className="mr-2" />
+                    {editedPostImage ? 'Изменить фото' : 'Добавить фото'}
+                  </span>
+                </Button>
+              </label>
+              <input
+                id="edit-post-image-upload"
+                type="file"
+                accept="image/*"
+                onChange={handleEditPostImageUpload}
+                className="hidden"
+              />
+            </div>
+            <Button onClick={handleSaveEditedPost} disabled={!editedPostText.trim()} className="w-full">
+              <Icon name="Save" size={16} className="mr-2" />
+              Сохранить изменения
             </Button>
           </div>
         </DialogContent>

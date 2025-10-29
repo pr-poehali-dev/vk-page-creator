@@ -29,6 +29,12 @@ interface Post {
   liked: boolean;
 }
 
+interface Photo {
+  id: number;
+  url: string;
+  name: string;
+}
+
 const Index = () => {
   const [profile, setProfile] = useState<UserProfile>({
     name: 'Иван Иванов',
@@ -50,6 +56,7 @@ const Index = () => {
   const [newPost, setNewPost] = useState('');
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editedProfile, setEditedProfile] = useState(profile);
+  const [photos, setPhotos] = useState<Photo[]>([]);
 
   const handleLike = (postId: number) => {
     setPosts(posts.map(post => 
@@ -76,6 +83,28 @@ const Index = () => {
   const handleSaveProfile = () => {
     setProfile(editedProfile);
     setEditDialogOpen(false);
+  };
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      Array.from(files).forEach(file => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const newPhoto: Photo = {
+            id: Date.now() + Math.random(),
+            url: reader.result as string,
+            name: file.name
+          };
+          setPhotos(prev => [...prev, newPhoto]);
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  };
+
+  const handleDeletePhoto = (photoId: number) => {
+    setPhotos(photos.filter(photo => photo.id !== photoId));
   };
 
   return (

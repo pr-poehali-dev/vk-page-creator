@@ -185,6 +185,17 @@ const Index = () => {
     setPhotos(photos.filter(photo => photo.id !== photoId));
   };
 
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfile({ ...profile, avatar: reader.result as string });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleOpenCommentDialog = (postId: number) => {
     setCurrentPostId(postId);
     setCommentDialogOpen(true);
@@ -306,10 +317,25 @@ const Index = () => {
               <div className="h-48 bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20"></div>
               <div className="px-6 pb-6">
                 <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end -mt-16 mb-4">
-                  <Avatar className="w-32 h-32 border-4 border-card">
-                    <AvatarImage src={profile.avatar} alt={profile.name} />
-                    <AvatarFallback>{profile.name[0]}</AvatarFallback>
-                  </Avatar>
+                  <div className="relative group">
+                    <Avatar className="w-32 h-32 border-4 border-card">
+                      <AvatarImage src={profile.avatar} alt={profile.name} />
+                      <AvatarFallback>{profile.name[0]}</AvatarFallback>
+                    </Avatar>
+                    <label 
+                      htmlFor="avatar-upload" 
+                      className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                    >
+                      <Icon name="Camera" size={32} className="text-white" />
+                    </label>
+                    <input
+                      id="avatar-upload"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleAvatarUpload}
+                      className="hidden"
+                    />
+                  </div>
                   <div className="flex-1">
                     <h2 className="text-2xl font-bold text-foreground">{profile.name}</h2>
                     <p className="text-muted-foreground">{profile.status}</p>

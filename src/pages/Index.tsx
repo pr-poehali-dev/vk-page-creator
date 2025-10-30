@@ -230,7 +230,7 @@ const Index = () => {
     setEditingPost(post);
     setEditedPostText(post.text);
     setEditedPostImage(post.image || '');
-    setEditedPostDate(new Date(post.timestamp).toISOString().slice(0, 16));
+    setEditedPostDate(post.timestamp ? new Date(post.timestamp).toISOString().slice(0, 16) : '');
     setEditPostDialogOpen(true);
   };
 

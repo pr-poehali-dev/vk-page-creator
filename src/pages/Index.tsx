@@ -61,6 +61,8 @@ interface Music {
   artist: string;
   duration: string;
   audioUrl?: string;
+  coverImage?: string;
+  likes: number;
 }
 
 interface Video {
@@ -131,9 +133,9 @@ const Index = () => {
     { id: 4, name: 'Алексей Сидоров', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alexey', status: 'был вчера' }
   ]));
   const [music, setMusic] = useState<Music[]>(() => loadFromStorage('music', [
-    { id: 1, title: 'Imagine', artist: 'John Lennon', duration: '3:05' },
-    { id: 2, title: 'Bohemian Rhapsody', artist: 'Queen', duration: '5:55' },
-    { id: 3, title: 'Hotel California', artist: 'Eagles', duration: '6:30' }
+    { id: 1, title: 'Imagine', artist: 'John Lennon', duration: '3:05', likes: 245 },
+    { id: 2, title: 'Bohemian Rhapsody', artist: 'Queen', duration: '5:55', likes: 892 },
+    { id: 3, title: 'Hotel California', artist: 'Eagles', duration: '6:30', likes: 567 }
   ]));
   const [videos, setVideos] = useState<Video[]>(() => loadFromStorage('videos', [
     { id: 1, title: 'Путешествие в горы', thumbnail: 'https://api.dicebear.com/7.x/shapes/svg?seed=video1', duration: '5:32' },
@@ -168,6 +170,8 @@ const Index = () => {
   const [musicArtist, setMusicArtist] = useState('');
   const [musicDuration, setMusicDuration] = useState('');
   const [musicAudioFile, setMusicAudioFile] = useState<string>('');
+  const [musicCover, setMusicCover] = useState<string>('');
+  const [musicLikes, setMusicLikes] = useState('0');
   
   const [videoDialogOpen, setVideoDialogOpen] = useState(false);
   const [editingVideo, setEditingVideo] = useState<Video | null>(null);
@@ -398,22 +402,27 @@ const Index = () => {
       setMusicArtist(track.artist);
       setMusicDuration(track.duration);
       setMusicAudioFile(track.audioUrl || '');
+      setMusicCover(track.coverImage || '');
+      setMusicLikes(String(track.likes || 0));
     } else {
       setEditingMusic(null);
       setMusicTitle('');
       setMusicArtist('');
       setMusicDuration('');
       setMusicAudioFile('');
+      setMusicCover('');
+      setMusicLikes('0');
     }
     setMusicDialogOpen(true);
   };
 
   const handleSaveMusic = () => {
     if (musicTitle.trim() && musicArtist.trim()) {
+      const likesNum = parseInt(musicLikes) || 0;
       if (editingMusic) {
         setMusic(music.map(m => 
           m.id === editingMusic.id 
-            ? { ...m, title: musicTitle, artist: musicArtist, duration: musicDuration, audioUrl: musicAudioFile }
+            ? { ...m, title: musicTitle, artist: musicArtist, duration: musicDuration, audioUrl: musicAudioFile, coverImage: musicCover, likes: likesNum }
             : m
         ));
       } else {
@@ -422,7 +431,9 @@ const Index = () => {
           title: musicTitle,
           artist: musicArtist,
           duration: musicDuration,
-          audioUrl: musicAudioFile
+          audioUrl: musicAudioFile,
+          coverImage: musicCover,
+          likes: likesNum
         };
         setMusic([...music, newTrack]);
       }
@@ -444,6 +455,17 @@ const Index = () => {
       const reader = new FileReader();
       reader.onloadend = () => {
         setMusicAudioFile(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleMusicCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setMusicCover(reader.result as string);
       };
       reader.readAsDataURL(file);
     }
@@ -855,12 +877,20 @@ const Index = () => {
                       </Button>
                       {music.map(track => (
                         <Card key={track.id} className="p-3 flex items-center gap-3">
-                          <div className="w-10 h-10 bg-primary/10 rounded flex items-center justify-center">
-                            <Icon name="Music" size={20} className="text-primary" />
-                          </div>
+                          {track.coverImage ? (
+                            <img src={track.coverImage} alt={track.title} className="w-12 h-12 rounded object-cover" />
+                          ) : (
+                            <div className="w-12 h-12 bg-primary/10 rounded flex items-center justify-center">
+                              <Icon name="Music" size={20} className="text-primary" />
+                            </div>
+                          )}
                           <div className="flex-1">
                             <p className="font-medium text-foreground">{track.title}</p>
                             <p className="text-sm text-muted-foreground">{track.artist} • {track.duration}</p>
+                            <div className="flex items-center gap-1 mt-1">
+                              <Icon name="Heart" size={14} className="text-red-500 fill-red-500" />
+                              <span className="text-xs text-muted-foreground">{track.likes}</span>
+                            </div>
                           </div>
                           <div className="flex gap-1">
                             {track.audioUrl && (
@@ -1367,6 +1397,40 @@ const Index = () => {
                 onChange={(e) => setMusicDuration(e.target.value)}
                 placeholder="3:45"
                 className="mt-2"
+              />
+            </div>
+            <div>
+              <Label>Количество лайков</Label>
+              <Input
+                type="number"
+                value={musicLikes}
+                onChange={(e) => setMusicLikes(e.target.value)}
+                placeholder="0"
+                className="mt-2"
+                min="0"
+              />
+            </div>
+            <div>
+              <Label>Обложка трека</Label>
+              {musicCover && (
+                <div className="mt-2 mb-2">
+                  <img src={musicCover} alt="Обложка" className="w-20 h-20 object-cover rounded" />
+                </div>
+              )}
+              <label htmlFor="music-cover-upload">
+                <Button variant="outline" size="sm" type="button" asChild>
+                  <span>
+                    <Icon name="Image" size={16} className="mr-2" />
+                    {musicCover ? 'Изменить обложку' : 'Загрузить обложку'}
+                  </span>
+                </Button>
+              </label>
+              <input
+                id="music-cover-upload"
+                type="file"
+                accept="image/*"
+                onChange={handleMusicCoverUpload}
+                className="hidden"
               />
             </div>
             <div>

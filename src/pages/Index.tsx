@@ -256,6 +256,36 @@ const Index = () => {
   const [editedCommentText, setEditedCommentText] = useState('');
   const [editedCommentFriendId, setEditedCommentFriendId] = useState<number | null>(null);
 
+  const compressImage = (file: File, maxWidth: number = 800, quality: number = 0.7): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width;
+            width = maxWidth;
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = reject;
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handleLike = (postId: number) => {
     setPosts(posts.map(post => 
       post.id === postId 
@@ -285,14 +315,15 @@ const Index = () => {
     }
   };
 
-  const handlePostImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePostImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setNewPostImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    if (file && file.type.startsWith('image/')) {
+      try {
+        const compressed = await compressImage(file, 800, 0.75);
+        setNewPostImage(compressed);
+      } catch (error) {
+        console.error('Ошибка загрузки изображения поста:', error);
+      }
     }
   };
 
@@ -326,14 +357,15 @@ const Index = () => {
     }
   };
 
-  const handleEditPostImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleEditPostImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setEditedPostImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    if (file && file.type.startsWith('image/')) {
+      try {
+        const compressed = await compressImage(file, 800, 0.75);
+        setEditedPostImage(compressed);
+      } catch (error) {
+        console.error('Ошибка загрузки изображения:', error);
+      }
     }
   };
 
@@ -346,21 +378,24 @@ const Index = () => {
     setEditDialogOpen(false);
   };
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
-      Array.from(files).forEach(file => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const newPhoto: Photo = {
-            id: Date.now() + Math.random(),
-            url: reader.result as string,
-            name: file.name
-          };
-          setPhotos(prev => [...prev, newPhoto]);
-        };
-        reader.readAsDataURL(file);
-      });
+      for (const file of Array.from(files)) {
+        if (file.type.startsWith('image/')) {
+          try {
+            const compressed = await compressImage(file, 800, 0.75);
+            const newPhoto: Photo = {
+              id: Date.now() + Math.random(),
+              url: compressed,
+              name: file.name
+            };
+            setPhotos(prev => [...prev, newPhoto]);
+          } catch (error) {
+            console.error('Ошибка загрузки фото:', error);
+          }
+        }
+      }
     }
   };
 
@@ -368,25 +403,51 @@ const Index = () => {
     setPhotos(photos.filter(photo => photo.id !== photoId));
   };
 
-  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfile({ ...profile, avatar: reader.result as string });
-      };
-      reader.readAsDataURL(file);
+    if (file && file.type.startsWith('image/')) {
+      try {
+        const compressed = await compressImage(file, 400, 0.8);
+        setProfile({ ...profile, avatar: compressed });
+      } catch (error) {
+        console.error('Ошибка загрузки аватара:', error);
+      }
     }
   };
 
-  const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleEditAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfile({ ...profile, coverImage: reader.result as string });
-      };
-      reader.readAsDataURL(file);
+    if (file && file.type.startsWith('image/')) {
+      try {
+        const compressed = await compressImage(file, 400, 0.8);
+        setEditedProfile({ ...editedProfile, avatar: compressed });
+      } catch (error) {
+        console.error('Ошибка загрузки аватара:', error);
+      }
+    }
+  };
+
+  const handleEditCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      try {
+        const compressed = await compressImage(file, 1200, 0.75);
+        setEditedProfile({ ...editedProfile, coverImage: compressed });
+      } catch (error) {
+        console.error('Ошибка загрузки обложки:', error);
+      }
+    }
+  };
+
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      try {
+        const compressed = await compressImage(file, 1200, 0.75);
+        setProfile({ ...profile, coverImage: compressed });
+      } catch (error) {
+        console.error('Ошибка загрузки обложки:', error);
+      }
     }
   };
 
@@ -460,14 +521,15 @@ const Index = () => {
     setFriends(friends.filter(f => f.id !== friendId));
   };
 
-  const handleFriendAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFriendAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFriendAvatar(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    if (file && file.type.startsWith('image/')) {
+      try {
+        const compressed = await compressImage(file, 400, 0.8);
+        setFriendAvatar(compressed);
+      } catch (error) {
+        console.error('Ошибка загрузки аватара друга:', error);
+      }
     }
   };
 
@@ -540,14 +602,15 @@ const Index = () => {
     }
   };
 
-  const handleMusicCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMusicCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setMusicCover(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      try {
+        const compressed = await compressImage(file, 400, 0.8);
+        setMusicCover(compressed);
+      } catch (error) {
+        console.error('Ошибка загрузки обложки трека:', error);
+      }
     }
   };
 
@@ -650,14 +713,15 @@ const Index = () => {
     setCommunities(communities.filter(c => c.id !== communityId));
   };
 
-  const handleCommunityAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCommunityAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setCommunityAvatar(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      try {
+        const compressed = await compressImage(file, 400, 0.8);
+        setCommunityAvatar(compressed);
+      } catch (error) {
+        console.error('Ошибка загрузки аватара сообщества:', error);
+      }
     }
   };
 
@@ -768,25 +832,27 @@ const Index = () => {
     setNews(news.filter(n => n.id !== newsId));
   };
 
-  const handleNewsImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleNewsImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setNewsImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      try {
+        const compressed = await compressImage(file, 800, 0.75);
+        setNewsImage(compressed);
+      } catch (error) {
+        console.error('Ошибка загрузки изображения новости:', error);
+      }
     }
   };
 
-  const handleNewsSourceAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleNewsSourceAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setNewsSourceAvatar(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      try {
+        const compressed = await compressImage(file, 400, 0.8);
+        setNewsSourceAvatar(compressed);
+      } catch (error) {
+        console.error('Ошибка загрузки аватара источника:', error);
+      }
     }
   };
 
@@ -856,14 +922,15 @@ const Index = () => {
     }));
   };
 
-  const handleVideoThumbnailUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleVideoThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setVideoThumbnail(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    if (file && file.type.startsWith('image/')) {
+      try {
+        const compressed = await compressImage(file, 600, 0.75);
+        setVideoThumbnail(compressed);
+      } catch (error) {
+        console.error('Ошибка загрузки обложки видео:', error);
+      }
     }
   };
 
@@ -1066,6 +1133,55 @@ const Index = () => {
                         <DialogTitle>Редактировать профиль</DialogTitle>
                       </DialogHeader>
                       <div className="space-y-4">
+                        <div>
+                          <Label>Аватар</Label>
+                          {editedProfile.avatar && (
+                            <div className="mt-2 mb-2">
+                              <Avatar className="w-20 h-20">
+                                <AvatarImage src={editedProfile.avatar} alt={editedProfile.name} />
+                                <AvatarFallback>{editedProfile.name[0]}</AvatarFallback>
+                              </Avatar>
+                            </div>
+                          )}
+                          <label htmlFor="edit-avatar-upload">
+                            <Button variant="outline" size="sm" type="button" asChild>
+                              <span>
+                                <Icon name="Upload" size={16} className="mr-2" />
+                                {editedProfile.avatar ? 'Изменить аватар' : 'Загрузить аватар'}
+                              </span>
+                            </Button>
+                          </label>
+                          <input
+                            id="edit-avatar-upload"
+                            type="file"
+                            accept="image/*"
+                            onChange={handleEditAvatarUpload}
+                            className="hidden"
+                          />
+                        </div>
+                        <div>
+                          <Label>Обложка профиля</Label>
+                          {editedProfile.coverImage && (
+                            <div className="mt-2 mb-2">
+                              <img src={editedProfile.coverImage} alt="Обложка" className="w-full h-32 object-cover rounded" />
+                            </div>
+                          )}
+                          <label htmlFor="edit-cover-upload">
+                            <Button variant="outline" size="sm" type="button" asChild>
+                              <span>
+                                <Icon name="Upload" size={16} className="mr-2" />
+                                {editedProfile.coverImage ? 'Изменить обложку' : 'Загрузить обложку'}
+                              </span>
+                            </Button>
+                          </label>
+                          <input
+                            id="edit-cover-upload"
+                            type="file"
+                            accept="image/*"
+                            onChange={handleEditCoverUpload}
+                            className="hidden"
+                          />
+                        </div>
                         <div>
                           <Label>Имя</Label>
                           <Input 

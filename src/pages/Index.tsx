@@ -28,6 +28,7 @@ interface Comment {
   avatar: string;
   text: string;
   date: string;
+  friendId?: number;
 }
 
 interface Post {
@@ -63,6 +64,7 @@ interface Music {
   audioUrl?: string;
   coverImage?: string;
   likes: number;
+  dislikes: number;
 }
 
 interface Video {
@@ -80,6 +82,20 @@ interface Message {
   text: string;
   time: string;
   unread: boolean;
+  friendId?: number;
+}
+
+interface NewsItem {
+  id: number;
+  source: string;
+  sourceAvatar: string;
+  text: string;
+  image?: string;
+  likes: number;
+  comments: number;
+  shares: number;
+  date: string;
+  timestamp: number;
 }
 
 interface Community {
@@ -133,9 +149,9 @@ const Index = () => {
     { id: 4, name: 'Алексей Сидоров', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alexey', status: 'был вчера' }
   ]));
   const [music, setMusic] = useState<Music[]>(() => loadFromStorage('music', [
-    { id: 1, title: 'Imagine', artist: 'John Lennon', duration: '3:05', likes: 245 },
-    { id: 2, title: 'Bohemian Rhapsody', artist: 'Queen', duration: '5:55', likes: 892 },
-    { id: 3, title: 'Hotel California', artist: 'Eagles', duration: '6:30', likes: 567 }
+    { id: 1, title: 'Imagine', artist: 'John Lennon', duration: '3:05', likes: 245, dislikes: 12 },
+    { id: 2, title: 'Bohemian Rhapsody', artist: 'Queen', duration: '5:55', likes: 892, dislikes: 34 },
+    { id: 3, title: 'Hotel California', artist: 'Eagles', duration: '6:30', likes: 567, dislikes: 23 }
   ]));
   const [videos, setVideos] = useState<Video[]>(() => loadFromStorage('videos', [
     { id: 1, title: 'Путешествие в горы', thumbnail: 'https://api.dicebear.com/7.x/shapes/svg?seed=video1', duration: '5:32' },
@@ -155,8 +171,8 @@ const Index = () => {
   const [commentDialogOpen, setCommentDialogOpen] = useState(false);
   const [currentPostId, setCurrentPostId] = useState<number | null>(null);
   const [commentText, setCommentText] = useState('');
-  const [commentAuthor, setCommentAuthor] = useState('Анна Смирнова');
-  const [commentAvatar, setCommentAvatar] = useState('https://api.dicebear.com/7.x/avataaars/svg?seed=Anna');
+  const [commentAuthor, setCommentAuthor] = useState('');
+  const [commentAvatar, setCommentAvatar] = useState('');
   
   const [friendDialogOpen, setFriendDialogOpen] = useState(false);
   const [editingFriend, setEditingFriend] = useState<Friend | null>(null);
@@ -179,12 +195,66 @@ const Index = () => {
   const [videoDuration, setVideoDuration] = useState('');
   const [videoThumbnail, setVideoThumbnail] = useState('');
 
-  const mockUsers = [
-    { name: 'Анна Смирнова', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Anna' },
-    { name: 'Петр Иванов', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Petr' },
-    { name: 'Мария Петрова', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Maria' },
-    { name: 'Алексей Сидоров', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alexey' }
-  ];
+  const [musicDislikes, setMusicDislikes] = useState('0');
+  
+  const [communityDialogOpen, setCommunityDialogOpen] = useState(false);
+  const [editingCommunity, setEditingCommunity] = useState<Community | null>(null);
+  const [communityName, setCommunityName] = useState('');
+  const [communityMembers, setCommunityMembers] = useState('0');
+  const [communityAvatar, setCommunityAvatar] = useState('');
+  
+  const [messageDialogOpen, setMessageDialogOpen] = useState(false);
+  const [editingMessage, setEditingMessage] = useState<Message | null>(null);
+  const [messageText, setMessageText] = useState('');
+  const [messageTime, setMessageTime] = useState('');
+  const [messageFromFriendId, setMessageFromFriendId] = useState<number | null>(null);
+  
+  const [news, setNews] = useState<NewsItem[]>(() => loadFromStorage('news', [
+    { 
+      id: 1, 
+      source: 'TechNews', 
+      sourceAvatar: 'https://api.dicebear.com/7.x/shapes/svg?seed=tech', 
+      text: 'Новый релиз React 19 уже доступен! 🚀', 
+      likes: 1234, 
+      comments: 89, 
+      shares: 234,
+      date: '2 часа назад',
+      timestamp: Date.now() - 7200000
+    },
+    { 
+      id: 2, 
+      source: 'World News', 
+      sourceAvatar: 'https://api.dicebear.com/7.x/shapes/svg?seed=world', 
+      text: 'Важные события дня: что происходит в мире технологий',
+      image: 'https://api.dicebear.com/7.x/shapes/svg?seed=newsimage',
+      likes: 892, 
+      comments: 156, 
+      shares: 445,
+      date: '5 часов назад',
+      timestamp: Date.now() - 18000000
+    }
+  ]));
+  
+  const [newsDialogOpen, setNewsDialogOpen] = useState(false);
+  const [editingNews, setEditingNews] = useState<NewsItem | null>(null);
+  const [newsSource, setNewsSource] = useState('');
+  const [newsSourceAvatar, setNewsSourceAvatar] = useState('');
+  const [newsText, setNewsText] = useState('');
+  const [newsImage, setNewsImage] = useState('');
+  const [newsLikes, setNewsLikes] = useState('0');
+  const [newsComments, setNewsComments] = useState('0');
+  const [newsShares, setNewsShares] = useState('0');
+  const [newsDate, setNewsDate] = useState('');
+  
+  const [editPostLikesDialogOpen, setEditPostLikesDialogOpen] = useState(false);
+  const [editingPostForLikes, setEditingPostForLikes] = useState<Post | null>(null);
+  const [editedPostLikes, setEditedPostLikes] = useState('0');
+  
+  const [editCommentDialogOpen, setEditCommentDialogOpen] = useState(false);
+  const [editingComment, setEditingComment] = useState<Comment | null>(null);
+  const [editCommentPostId, setEditCommentPostId] = useState<number | null>(null);
+  const [editedCommentText, setEditedCommentText] = useState('');
+  const [editedCommentFriendId, setEditedCommentFriendId] = useState<number | null>(null);
 
   const handleLike = (postId: number) => {
     setPosts(posts.map(post => 
@@ -322,17 +392,23 @@ const Index = () => {
 
   const handleOpenCommentDialog = (postId: number) => {
     setCurrentPostId(postId);
+    if (friends.length > 0 && !commentAuthor) {
+      setCommentAuthor(friends[0].name);
+      setCommentAvatar(friends[0].avatar);
+    }
     setCommentDialogOpen(true);
   };
 
   const handleAddComment = () => {
     if (commentText.trim() && currentPostId) {
+      const selectedFriend = friends.find(f => f.name === commentAuthor);
       const newComment: Comment = {
         id: Date.now(),
         author: commentAuthor,
         avatar: commentAvatar,
         text: commentText,
-        date: 'только что'
+        date: 'только что',
+        friendId: selectedFriend?.id
       };
       setPosts(posts.map(post => 
         post.id === currentPostId
@@ -404,6 +480,7 @@ const Index = () => {
       setMusicAudioFile(track.audioUrl || '');
       setMusicCover(track.coverImage || '');
       setMusicLikes(String(track.likes || 0));
+      setMusicDislikes(String(track.dislikes || 0));
     } else {
       setEditingMusic(null);
       setMusicTitle('');
@@ -412,6 +489,7 @@ const Index = () => {
       setMusicAudioFile('');
       setMusicCover('');
       setMusicLikes('0');
+      setMusicDislikes('0');
     }
     setMusicDialogOpen(true);
   };
@@ -419,10 +497,11 @@ const Index = () => {
   const handleSaveMusic = () => {
     if (musicTitle.trim() && musicArtist.trim()) {
       const likesNum = parseInt(musicLikes) || 0;
+      const dislikesNum = parseInt(musicDislikes) || 0;
       if (editingMusic) {
         setMusic(music.map(m => 
           m.id === editingMusic.id 
-            ? { ...m, title: musicTitle, artist: musicArtist, duration: musicDuration, audioUrl: musicAudioFile, coverImage: musicCover, likes: likesNum }
+            ? { ...m, title: musicTitle, artist: musicArtist, duration: musicDuration, audioUrl: musicAudioFile, coverImage: musicCover, likes: likesNum, dislikes: dislikesNum }
             : m
         ));
       } else {
@@ -433,7 +512,8 @@ const Index = () => {
           duration: musicDuration,
           audioUrl: musicAudioFile,
           coverImage: musicCover,
-          likes: likesNum
+          likes: likesNum,
+          dislikes: dislikesNum
         };
         setMusic([...music, newTrack]);
       }
@@ -529,6 +609,253 @@ const Index = () => {
     setVideos(videos.filter(v => v.id !== videoId));
   };
 
+  const handleOpenCommunityDialog = (community?: Community) => {
+    if (community) {
+      setEditingCommunity(community);
+      setCommunityName(community.name);
+      setCommunityMembers(String(community.members));
+      setCommunityAvatar(community.avatar);
+    } else {
+      setEditingCommunity(null);
+      setCommunityName('');
+      setCommunityMembers('0');
+      setCommunityAvatar('');
+    }
+    setCommunityDialogOpen(true);
+  };
+
+  const handleSaveCommunity = () => {
+    if (communityName.trim()) {
+      const membersNum = parseInt(communityMembers) || 0;
+      if (editingCommunity) {
+        setCommunities(communities.map(c => 
+          c.id === editingCommunity.id 
+            ? { ...c, name: communityName, members: membersNum, avatar: communityAvatar || c.avatar }
+            : c
+        ));
+      } else {
+        const newCommunity: Community = {
+          id: Date.now(),
+          name: communityName,
+          members: membersNum,
+          avatar: communityAvatar || `https://api.dicebear.com/7.x/shapes/svg?seed=${communityName}`
+        };
+        setCommunities([...communities, newCommunity]);
+      }
+      setCommunityDialogOpen(false);
+    }
+  };
+
+  const handleDeleteCommunity = (communityId: number) => {
+    setCommunities(communities.filter(c => c.id !== communityId));
+  };
+
+  const handleCommunityAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCommunityAvatar(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleOpenMessageDialog = (message?: Message) => {
+    if (message) {
+      setEditingMessage(message);
+      setMessageText(message.text);
+      setMessageTime(message.time);
+      setMessageFromFriendId(message.friendId || null);
+    } else {
+      setEditingMessage(null);
+      setMessageText('');
+      setMessageTime('');
+      setMessageFromFriendId(friends.length > 0 ? friends[0].id : null);
+    }
+    setMessageDialogOpen(true);
+  };
+
+  const handleSaveMessage = () => {
+    if (messageText.trim() && messageFromFriendId !== null) {
+      const friend = friends.find(f => f.id === messageFromFriendId);
+      if (friend) {
+        if (editingMessage) {
+          setMessages(messages.map(m => 
+            m.id === editingMessage.id 
+              ? { ...m, text: messageText, time: messageTime || m.time, from: friend.name, avatar: friend.avatar, friendId: friend.id }
+              : m
+          ));
+        } else {
+          const newMessage: Message = {
+            id: Date.now(),
+            from: friend.name,
+            avatar: friend.avatar,
+            text: messageText,
+            time: messageTime || 'только что',
+            unread: true,
+            friendId: friend.id
+          };
+          setMessages([...messages, newMessage]);
+        }
+        setMessageDialogOpen(false);
+      }
+    }
+  };
+
+  const handleDeleteMessage = (messageId: number) => {
+    setMessages(messages.filter(m => m.id !== messageId));
+  };
+
+  const handleOpenNewsDialog = (newsItem?: NewsItem) => {
+    if (newsItem) {
+      setEditingNews(newsItem);
+      setNewsSource(newsItem.source);
+      setNewsSourceAvatar(newsItem.sourceAvatar);
+      setNewsText(newsItem.text);
+      setNewsImage(newsItem.image || '');
+      setNewsLikes(String(newsItem.likes));
+      setNewsComments(String(newsItem.comments));
+      setNewsShares(String(newsItem.shares));
+      setNewsDate(newsItem.date);
+    } else {
+      setEditingNews(null);
+      setNewsSource('');
+      setNewsSourceAvatar('');
+      setNewsText('');
+      setNewsImage('');
+      setNewsLikes('0');
+      setNewsComments('0');
+      setNewsShares('0');
+      setNewsDate('');
+    }
+    setNewsDialogOpen(true);
+  };
+
+  const handleSaveNews = () => {
+    if (newsSource.trim() && newsText.trim()) {
+      const likesNum = parseInt(newsLikes) || 0;
+      const commentsNum = parseInt(newsComments) || 0;
+      const sharesNum = parseInt(newsShares) || 0;
+      const timestamp = newsDate ? new Date(newsDate).getTime() : Date.now();
+      
+      if (editingNews) {
+        setNews(news.map(n => 
+          n.id === editingNews.id 
+            ? { ...n, source: newsSource, sourceAvatar: newsSourceAvatar || n.sourceAvatar, text: newsText, image: newsImage, likes: likesNum, comments: commentsNum, shares: sharesNum, date: newsDate || n.date, timestamp }
+            : n
+        ));
+      } else {
+        const newNewsItem: NewsItem = {
+          id: Date.now(),
+          source: newsSource,
+          sourceAvatar: newsSourceAvatar || `https://api.dicebear.com/7.x/shapes/svg?seed=${newsSource}`,
+          text: newsText,
+          image: newsImage,
+          likes: likesNum,
+          comments: commentsNum,
+          shares: sharesNum,
+          date: newsDate || 'только что',
+          timestamp
+        };
+        setNews([...news, newNewsItem]);
+      }
+      setNewsDialogOpen(false);
+    }
+  };
+
+  const handleDeleteNews = (newsId: number) => {
+    setNews(news.filter(n => n.id !== newsId));
+  };
+
+  const handleNewsImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNewsImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleNewsSourceAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNewsSourceAvatar(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleOpenEditPostLikesDialog = (post: Post) => {
+    setEditingPostForLikes(post);
+    setEditedPostLikes(String(post.likes));
+    setEditPostLikesDialogOpen(true);
+  };
+
+  const handleSavePostLikes = () => {
+    if (editingPostForLikes) {
+      const likesNum = parseInt(editedPostLikes) || 0;
+      setPosts(posts.map(p => 
+        p.id === editingPostForLikes.id 
+          ? { ...p, likes: likesNum }
+          : p
+      ));
+      setEditPostLikesDialogOpen(false);
+    }
+  };
+
+  const handleOpenEditCommentDialog = (postId: number, comment: Comment) => {
+    setEditCommentPostId(postId);
+    setEditingComment(comment);
+    setEditedCommentText(comment.text);
+    setEditedCommentFriendId(comment.friendId || null);
+    setEditCommentDialogOpen(true);
+  };
+
+  const handleSaveEditedComment = () => {
+    if (editCommentPostId !== null && editingComment && editedCommentText.trim()) {
+      const friend = editedCommentFriendId ? friends.find(f => f.id === editedCommentFriendId) : null;
+      
+      setPosts(posts.map(p => {
+        if (p.id === editCommentPostId) {
+          return {
+            ...p,
+            comments: p.comments.map(c => 
+              c.id === editingComment.id
+                ? { 
+                    ...c, 
+                    text: editedCommentText,
+                    author: friend ? friend.name : c.author,
+                    avatar: friend ? friend.avatar : c.avatar,
+                    friendId: friend ? friend.id : c.friendId
+                  }
+                : c
+            )
+          };
+        }
+        return p;
+      }));
+      
+      setEditCommentDialogOpen(false);
+    }
+  };
+
+  const handleDeleteComment = (postId: number, commentId: number) => {
+    setPosts(posts.map(p => {
+      if (p.id === postId) {
+        return {
+          ...p,
+          comments: p.comments.filter(c => c.id !== commentId)
+        };
+      }
+      return p;
+    }));
+  };
+
   const handleVideoThumbnailUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -554,7 +881,7 @@ const Index = () => {
     } catch (e) {
       if (e instanceof DOMException && e.name === 'QuotaExceededError') {
         console.warn(`Хранилище переполнено. Очищаем старые данные...`);
-        const keysToKeep = ['profile', 'posts', 'photos', 'friends', 'music', 'videos', 'messages', 'communities'];
+        const keysToKeep = ['profile', 'posts', 'photos', 'friends', 'music', 'videos', 'messages', 'communities', 'news'];
         Object.keys(localStorage).forEach(k => {
           if (!keysToKeep.includes(k)) {
             localStorage.removeItem(k);
@@ -600,6 +927,10 @@ const Index = () => {
   useEffect(() => {
     saveToStorage('communities', communities);
   }, [communities]);
+
+  useEffect(() => {
+    saveToStorage('news', news);
+  }, [news]);
 
   const formatPostDate = (timestamp: number) => {
     const now = Date.now();
@@ -809,6 +1140,7 @@ const Index = () => {
                     <TabsTrigger value="friends">Друзья</TabsTrigger>
                     <TabsTrigger value="communities">Сообщества</TabsTrigger>
                     <TabsTrigger value="messages">Сообщения</TabsTrigger>
+                    <TabsTrigger value="news">Новости</TabsTrigger>
                   </TabsList>
                   
                   <TabsContent value="info" className="mt-4">
@@ -908,9 +1240,15 @@ const Index = () => {
                           <div className="flex-1">
                             <p className="font-medium text-foreground">{track.title}</p>
                             <p className="text-sm text-muted-foreground">{track.artist} • {track.duration}</p>
-                            <div className="flex items-center gap-1 mt-1">
-                              <Icon name="Heart" size={14} className="text-red-500 fill-red-500" />
-                              <span className="text-xs text-muted-foreground">{track.likes}</span>
+                            <div className="flex items-center gap-3 mt-1">
+                              <div className="flex items-center gap-1">
+                                <Icon name="Heart" size={14} className="text-red-500 fill-red-500" />
+                                <span className="text-xs text-muted-foreground">{track.likes}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Icon name="ThumbsDown" size={14} className="text-gray-500" />
+                                <span className="text-xs text-muted-foreground">{track.dislikes}</span>
+                              </div>
                             </div>
                           </div>
                           <div className="flex gap-1">
@@ -1025,6 +1363,10 @@ const Index = () => {
 
                   <TabsContent value="communities" className="mt-4">
                     <div className="space-y-3">
+                      <Button onClick={() => handleOpenCommunityDialog()} className="w-full mb-3">
+                        <Icon name="Plus" size={16} className="mr-2" />
+                        Добавить сообщество
+                      </Button>
                       {communities.map(community => (
                         <Card key={community.id} className="p-3 flex items-center gap-3">
                           <Avatar className="w-12 h-12">
@@ -1037,10 +1379,22 @@ const Index = () => {
                             <p className="font-medium text-foreground">{community.name}</p>
                             <p className="text-sm text-muted-foreground">{community.members.toLocaleString()} участников</p>
                           </div>
-                          <Button variant="outline" size="sm">
-                            <Icon name="Bell" size={16} className="mr-2" />
-                            Подписан
-                          </Button>
+                          <div className="flex gap-1">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleOpenCommunityDialog(community)}
+                            >
+                              <Icon name="Pencil" size={16} />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleDeleteCommunity(community.id)}
+                            >
+                              <Icon name="Trash2" size={16} />
+                            </Button>
+                          </div>
                         </Card>
                       ))}
                     </div>
@@ -1048,8 +1402,12 @@ const Index = () => {
 
                   <TabsContent value="messages" className="mt-4">
                     <div className="space-y-2">
+                      <Button onClick={() => handleOpenMessageDialog()} className="w-full mb-3">
+                        <Icon name="Plus" size={16} className="mr-2" />
+                        Добавить сообщение
+                      </Button>
                       {messages.map(message => (
-                        <Card key={message.id} className={`p-3 flex items-center gap-3 cursor-pointer hover:bg-accent transition-colors ${message.unread ? 'bg-accent/50' : ''}`}>
+                        <Card key={message.id} className={`p-3 flex items-center gap-3 ${message.unread ? 'bg-accent/50' : ''}`}>
                           <Avatar>
                             <AvatarImage src={message.avatar} alt={message.from} />
                             <AvatarFallback>{message.from[0]}</AvatarFallback>
@@ -1065,9 +1423,81 @@ const Index = () => {
                               {message.text}
                             </p>
                           </div>
-                          {message.unread && (
-                            <div className="w-2 h-2 bg-primary rounded-full"></div>
+                          <div className="flex gap-1">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleOpenMessageDialog(message)}
+                            >
+                              <Icon name="Pencil" size={16} />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleDeleteMessage(message.id)}
+                            >
+                              <Icon name="Trash2" size={16} />
+                            </Button>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="news" className="mt-4">
+                    <div className="space-y-3">
+                      <Button onClick={() => handleOpenNewsDialog()} className="w-full mb-3">
+                        <Icon name="Plus" size={16} className="mr-2" />
+                        Добавить новость
+                      </Button>
+                      {news.map(newsItem => (
+                        <Card key={newsItem.id} className="p-4">
+                          <div className="flex gap-3 mb-3">
+                            <Avatar>
+                              <AvatarImage src={newsItem.sourceAvatar} alt={newsItem.source} />
+                              <AvatarFallback>
+                                <Icon name="Newspaper" size={20} />
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1">
+                              <p className="font-semibold text-foreground">{newsItem.source}</p>
+                              <p className="text-sm text-muted-foreground">{newsItem.date}</p>
+                            </div>
+                            <div className="flex gap-1">
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handleOpenNewsDialog(newsItem)}
+                              >
+                                <Icon name="Pencil" size={16} />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handleDeleteNews(newsItem.id)}
+                              >
+                                <Icon name="Trash2" size={16} />
+                              </Button>
+                            </div>
+                          </div>
+                          <p className="mb-3 text-foreground whitespace-pre-wrap">{newsItem.text}</p>
+                          {newsItem.image && (
+                            <img src={newsItem.image} alt="News" className="w-full rounded-lg mb-3" />
                           )}
+                          <div className="flex gap-4 pt-3 border-t border-border text-sm text-muted-foreground">
+                            <div className="flex items-center gap-1">
+                              <Icon name="Heart" size={16} />
+                              <span>{newsItem.likes}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Icon name="MessageCircle" size={16} />
+                              <span>{newsItem.comments}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Icon name="Share2" size={16} />
+                              <span>{newsItem.shares}</span>
+                            </div>
+                          </div>
                         </Card>
                       ))}
                     </div>
@@ -1164,15 +1594,24 @@ const Index = () => {
                     <img src={post.image} alt="Post" className="w-full rounded-lg mb-3 max-w-2xl" />
                   )}
                   <div className="flex gap-4 pt-3 border-t border-border">
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => handleLike(post.id)}
-                      className={post.liked ? 'text-primary' : ''}
-                    >
-                      <Icon name="Heart" size={16} className="mr-2" fill={post.liked ? 'currentColor' : 'none'} />
-                      {post.likes}
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleLike(post.id)}
+                        className={post.liked ? 'text-primary' : ''}
+                      >
+                        <Icon name="Heart" size={16} className="mr-2" fill={post.liked ? 'currentColor' : 'none'} />
+                        {post.likes}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleOpenEditPostLikesDialog(post)}
+                      >
+                        <Icon name="Edit" size={12} />
+                      </Button>
+                    </div>
                     <Button 
                       variant="ghost" 
                       size="sm"
@@ -1200,7 +1639,25 @@ const Index = () => {
                               <p className="text-sm font-semibold text-foreground">{comment.author}</p>
                               <p className="text-sm text-foreground">{comment.text}</p>
                             </div>
-                            <p className="text-xs text-muted-foreground mt-1 ml-3">{comment.date}</p>
+                            <div className="flex items-center gap-2 mt-1 ml-3">
+                              <p className="text-xs text-muted-foreground">{comment.date}</p>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleOpenEditCommentDialog(post.id, comment)}
+                                className="h-6 px-2"
+                              >
+                                <Icon name="Edit" size={12} />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteComment(post.id, comment.id)}
+                                className="h-6 px-2 text-red-500"
+                              >
+                                <Icon name="Trash2" size={12} />
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -1229,26 +1686,24 @@ const Index = () => {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label>От чьего имени комментировать?</Label>
-              <div className="grid grid-cols-2 gap-2 mt-2">
-                {mockUsers.map((user) => (
-                  <Button
-                    key={user.name}
-                    variant={commentAuthor === user.name ? 'default' : 'outline'}
-                    className="justify-start h-auto py-2"
-                    onClick={() => {
-                      setCommentAuthor(user.name);
-                      setCommentAvatar(user.avatar);
-                    }}
-                  >
-                    <Avatar className="w-8 h-8 mr-2">
-                      <AvatarImage src={user.avatar} alt={user.name} />
-                      <AvatarFallback>{user.name[0]}</AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm">{user.name}</span>
-                  </Button>
+              <Label>От кого</Label>
+              <select
+                value={commentAuthor}
+                onChange={(e) => {
+                  const friend = friends.find(f => f.name === e.target.value);
+                  if (friend) {
+                    setCommentAuthor(friend.name);
+                    setCommentAvatar(friend.avatar);
+                  }
+                }}
+                className="w-full mt-2 p-2 border rounded-md"
+              >
+                {friends.map(friend => (
+                  <option key={friend.id} value={friend.name}>
+                    {friend.name}
+                  </option>
                 ))}
-              </div>
+              </select>
             </div>
             <div>
               <Label>Комментарий</Label>
@@ -1432,6 +1887,17 @@ const Index = () => {
               />
             </div>
             <div>
+              <Label>Количество дизлайков</Label>
+              <Input
+                type="number"
+                value={musicDislikes}
+                onChange={(e) => setMusicDislikes(e.target.value)}
+                placeholder="0"
+                className="mt-2"
+                min="0"
+              />
+            </div>
+            <div>
               <Label>Обложка трека</Label>
               {musicCover && (
                 <div className="mt-2 mb-2">
@@ -1535,6 +2001,293 @@ const Index = () => {
             <Button onClick={handleSaveVideo} disabled={!videoTitle.trim()} className="w-full">
               <Icon name="Save" size={16} className="mr-2" />
               {editingVideo ? 'Сохранить' : 'Добавить'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editPostLikesDialogOpen} onOpenChange={setEditPostLikesDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Изменить количество лайков</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Количество лайков</Label>
+              <Input
+                type="number"
+                value={editedPostLikes}
+                onChange={(e) => setEditedPostLikes(e.target.value)}
+                placeholder="0"
+                className="mt-2"
+                min="0"
+              />
+            </div>
+            <Button onClick={handleSavePostLikes} className="w-full">
+              <Icon name="Save" size={16} className="mr-2" />
+              Сохранить
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editCommentDialogOpen} onOpenChange={setEditCommentDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Редактировать комментарий</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>От кого</Label>
+              <select
+                value={editedCommentFriendId || ''}
+                onChange={(e) => setEditedCommentFriendId(Number(e.target.value))}
+                className="w-full mt-2 p-2 border rounded-md"
+              >
+                {friends.map(friend => (
+                  <option key={friend.id} value={friend.id}>
+                    {friend.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Label>Текст комментария</Label>
+              <Textarea
+                value={editedCommentText}
+                onChange={(e) => setEditedCommentText(e.target.value)}
+                placeholder="Текст комментария..."
+                className="mt-2 min-h-[80px]"
+              />
+            </div>
+            <Button onClick={handleSaveEditedComment} className="w-full" disabled={!editedCommentText.trim()}>
+              <Icon name="Save" size={16} className="mr-2" />
+              Сохранить
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={communityDialogOpen} onOpenChange={setCommunityDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingCommunity ? 'Редактировать сообщество' : 'Добавить сообщество'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Название</Label>
+              <Input
+                value={communityName}
+                onChange={(e) => setCommunityName(e.target.value)}
+                placeholder="Название сообщества..."
+                className="mt-2"
+              />
+            </div>
+            <div>
+              <Label>Количество участников</Label>
+              <Input
+                type="number"
+                value={communityMembers}
+                onChange={(e) => setCommunityMembers(e.target.value)}
+                placeholder="0"
+                className="mt-2"
+                min="0"
+              />
+            </div>
+            <div>
+              <Label>Аватар</Label>
+              {communityAvatar && (
+                <div className="mt-2 mb-2">
+                  <img src={communityAvatar} alt="Аватар" className="w-16 h-16 object-cover rounded" />
+                </div>
+              )}
+              <label htmlFor="community-avatar-upload">
+                <Button variant="outline" size="sm" type="button" asChild>
+                  <span>
+                    <Icon name="Image" size={16} className="mr-2" />
+                    {communityAvatar ? 'Изменить аватар' : 'Загрузить аватар'}
+                  </span>
+                </Button>
+              </label>
+              <input
+                id="community-avatar-upload"
+                type="file"
+                accept="image/*"
+                onChange={handleCommunityAvatarUpload}
+                className="hidden"
+              />
+            </div>
+            <Button onClick={handleSaveCommunity} disabled={!communityName.trim()} className="w-full">
+              <Icon name="Save" size={16} className="mr-2" />
+              {editingCommunity ? 'Сохранить' : 'Добавить'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={messageDialogOpen} onOpenChange={setMessageDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingMessage ? 'Редактировать сообщение' : 'Добавить сообщение'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>От кого</Label>
+              <select
+                value={messageFromFriendId || ''}
+                onChange={(e) => setMessageFromFriendId(Number(e.target.value))}
+                className="w-full mt-2 p-2 border rounded-md"
+              >
+                {friends.map(friend => (
+                  <option key={friend.id} value={friend.id}>
+                    {friend.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Label>Текст сообщения</Label>
+              <Textarea
+                value={messageText}
+                onChange={(e) => setMessageText(e.target.value)}
+                placeholder="Текст сообщения..."
+                className="mt-2 min-h-[80px]"
+              />
+            </div>
+            <div>
+              <Label>Время</Label>
+              <Input
+                value={messageTime}
+                onChange={(e) => setMessageTime(e.target.value)}
+                placeholder="10:30 или вчера"
+                className="mt-2"
+              />
+            </div>
+            <Button onClick={handleSaveMessage} disabled={!messageText.trim()} className="w-full">
+              <Icon name="Save" size={16} className="mr-2" />
+              {editingMessage ? 'Сохранить' : 'Добавить'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={newsDialogOpen} onOpenChange={setNewsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingNews ? 'Редактировать новость' : 'Добавить новость'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Источник</Label>
+              <Input
+                value={newsSource}
+                onChange={(e) => setNewsSource(e.target.value)}
+                placeholder="Название источника..."
+                className="mt-2"
+              />
+            </div>
+            <div>
+              <Label>Аватар источника</Label>
+              {newsSourceAvatar && (
+                <div className="mt-2 mb-2">
+                  <img src={newsSourceAvatar} alt="Аватар" className="w-12 h-12 object-cover rounded" />
+                </div>
+              )}
+              <label htmlFor="news-source-avatar-upload">
+                <Button variant="outline" size="sm" type="button" asChild>
+                  <span>
+                    <Icon name="Image" size={16} className="mr-2" />
+                    {newsSourceAvatar ? 'Изменить' : 'Загрузить'}
+                  </span>
+                </Button>
+              </label>
+              <input
+                id="news-source-avatar-upload"
+                type="file"
+                accept="image/*"
+                onChange={handleNewsSourceAvatarUpload}
+                className="hidden"
+              />
+            </div>
+            <div>
+              <Label>Текст новости</Label>
+              <Textarea
+                value={newsText}
+                onChange={(e) => setNewsText(e.target.value)}
+                placeholder="Текст новости..."
+                className="mt-2 min-h-[80px]"
+              />
+            </div>
+            <div>
+              <Label>Изображение (необязательно)</Label>
+              {newsImage && (
+                <div className="mt-2 mb-2">
+                  <img src={newsImage} alt="Изображение" className="w-full h-32 object-cover rounded" />
+                </div>
+              )}
+              <label htmlFor="news-image-upload">
+                <Button variant="outline" size="sm" type="button" asChild>
+                  <span>
+                    <Icon name="Image" size={16} className="mr-2" />
+                    {newsImage ? 'Изменить' : 'Загрузить'}
+                  </span>
+                </Button>
+              </label>
+              <input
+                id="news-image-upload"
+                type="file"
+                accept="image/*"
+                onChange={handleNewsImageUpload}
+                className="hidden"
+              />
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <Label>Лайки</Label>
+                <Input
+                  type="number"
+                  value={newsLikes}
+                  onChange={(e) => setNewsLikes(e.target.value)}
+                  placeholder="0"
+                  className="mt-2"
+                  min="0"
+                />
+              </div>
+              <div>
+                <Label>Комментарии</Label>
+                <Input
+                  type="number"
+                  value={newsComments}
+                  onChange={(e) => setNewsComments(e.target.value)}
+                  placeholder="0"
+                  className="mt-2"
+                  min="0"
+                />
+              </div>
+              <div>
+                <Label>Репосты</Label>
+                <Input
+                  type="number"
+                  value={newsShares}
+                  onChange={(e) => setNewsShares(e.target.value)}
+                  placeholder="0"
+                  className="mt-2"
+                  min="0"
+                />
+              </div>
+            </div>
+            <div>
+              <Label>Дата</Label>
+              <Input
+                value={newsDate}
+                onChange={(e) => setNewsDate(e.target.value)}
+                placeholder="2 часа назад"
+                className="mt-2"
+              />
+            </div>
+            <Button onClick={handleSaveNews} disabled={!newsSource.trim() || !newsText.trim()} className="w-full">
+              <Icon name="Save" size={16} className="mr-2" />
+              {editingNews ? 'Сохранить' : 'Добавить'}
             </Button>
           </div>
         </DialogContent>

@@ -548,36 +548,57 @@ const Index = () => {
     ));
   };
 
+  const saveToStorage = (key: string, data: any) => {
+    try {
+      localStorage.setItem(key, JSON.stringify(data));
+    } catch (e) {
+      if (e instanceof DOMException && e.name === 'QuotaExceededError') {
+        console.warn(`Хранилище переполнено. Очищаем старые данные...`);
+        const keysToKeep = ['profile', 'posts', 'photos', 'friends', 'music', 'videos', 'messages', 'communities'];
+        Object.keys(localStorage).forEach(k => {
+          if (!keysToKeep.includes(k)) {
+            localStorage.removeItem(k);
+          }
+        });
+        try {
+          localStorage.setItem(key, JSON.stringify(data));
+        } catch (err) {
+          console.error('Невозможно сохранить данные:', err);
+        }
+      }
+    }
+  };
+
   useEffect(() => {
-    localStorage.setItem('profile', JSON.stringify(profile));
+    saveToStorage('profile', profile);
   }, [profile]);
 
   useEffect(() => {
-    localStorage.setItem('posts', JSON.stringify(posts));
+    saveToStorage('posts', posts);
   }, [posts]);
 
   useEffect(() => {
-    localStorage.setItem('photos', JSON.stringify(photos));
+    saveToStorage('photos', photos);
   }, [photos]);
 
   useEffect(() => {
-    localStorage.setItem('friends', JSON.stringify(friends));
+    saveToStorage('friends', friends);
   }, [friends]);
 
   useEffect(() => {
-    localStorage.setItem('music', JSON.stringify(music));
+    saveToStorage('music', music);
   }, [music]);
 
   useEffect(() => {
-    localStorage.setItem('videos', JSON.stringify(videos));
+    saveToStorage('videos', videos);
   }, [videos]);
 
   useEffect(() => {
-    localStorage.setItem('messages', JSON.stringify(messages));
+    saveToStorage('messages', messages);
   }, [messages]);
 
   useEffect(() => {
-    localStorage.setItem('communities', JSON.stringify(communities));
+    saveToStorage('communities', communities);
   }, [communities]);
 
   const formatPostDate = (timestamp: number) => {
